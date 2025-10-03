@@ -26,12 +26,19 @@ interface ApiResponse {
     obligations: BusinessObligation[];
 }
 
+interface FinalObligationResponse {
+    obligations: Obligation[];
+}
+
 export default function ObligationsPage() {
     const { nino, hmrcToken } = useAppState();
     const [obligations, setObligations] = useState<Obligation[]>([]);
+    const [finalObligations, setFinalObligations] = useState<Obligation[]>([]);
     const [selected, setSelected] = useState<Obligation | null>(null);
     const [loading, setLoading] = useState(false);
+    const [finalLoading, setFinalLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [finalError, setFinalError] = useState<string | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -75,6 +82,39 @@ export default function ObligationsPage() {
             }
         };
         if (nino) fetchObligations();
+    }, [nino, hmrcToken]);
+
+    useEffect(() => {
+        const fetchFinalObligations = async () => {
+            setFinalError(null);
+            setFinalLoading(true);
+            try {
+                const token =
+                    hmrcToken ||
+                    (typeof window !== "undefined"
+                        ? sessionStorage.getItem("hmrcToken")
+                        : "") ||
+                    "";
+                const params = new URLSearchParams({ nino: nino || "", token });
+                const baseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL;
+                if (!baseUrl) {
+                    throw new Error("Backend base URL is not configured");
+                }
+                const headers = getOrGenerateAndPersistFraudHeaders();
+                const res = await axios.get<FinalObligationResponse>(
+                    `${baseUrl}/api/external/getFinalObligationDetail?${params.toString()}`,
+                    { headers }
+                );
+                const data = res.data;
+
+                setFinalObligations(data?.obligations || []);
+            } catch (e: any) {
+                setFinalError(e?.message || "Failed to load final obligations");
+            } finally {
+                setFinalLoading(false);
+            }
+        };
+        if (nino) fetchFinalObligations();
     }, [nino, hmrcToken]);
 
     const onContinue = () => {
@@ -184,6 +224,63 @@ export default function ObligationsPage() {
             {!loading && obligations.length === 0 && (
                 <p className="help">No obligations found.</p>
             )}
+
+            {/* Final Obligations Section */}
+            <div className="mt-8 pt-6 border-t-2 border-gray-300">
+                <h2 className="font-bold text-xl mb-4 text-gray-800">Final Declaration Obligations</h2>
+
+                {finalLoading && <p className="text-gray-600">Loading final obligations...</p>}
+                {finalError && <p className="error">{finalError}</p>}
+
+                {!finalLoading && finalObligations.length > 0 && (
+                    <div className="border rounded-lg p-4 shadow-sm bg-purple-50 border-purple-300">
+                        <h3 className="font-medium text-md mb-3 text-purple-900">
+                            Final Declaration Status
+                        </h3>
+                        <ul className="space-y-2">
+                            {finalObligations.map((o: Obligation, idx: number) => (
+                                <li
+                                    key={`final-${o.periodStartDate}-${o.periodEndDate}-${idx}`}
+                                    className={`border rounded p-3 ${
+                                        o.status === "open"
+                                            ? "bg-yellow-50 border-yellow-300"
+                                            : "bg-blue-50 border-blue-300"
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    o.status === "open"
+                                                        ? "bg-yellow-100 text-yellow-800"
+                                                        : "bg-blue-100 text-blue-800"
+                                                }`}>
+                                                    {o.status?.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                Period: {o.periodStartDate} → {o.periodEndDate}
+                                            </p>
+                                            <p className="text-xs text-gray-600 mt-1">
+                                                Due Date: {o.dueDate}
+                                            </p>
+                                            {o.receivedDate && (
+                                                <p className="text-xs text-gray-600">
+                                                    Received: {o.receivedDate}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {!finalLoading && finalObligations.length === 0 && (
+                    <p className="text-gray-500 text-sm">No final declaration obligations found.</p>
+                )}
+            </div>
         </StepLayout>
     );
 }

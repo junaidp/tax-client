@@ -13,9 +13,9 @@ export default function AccessDetailPage() {
   const { setToken, setHmrcToken, setNino } = useAppState();
 
   const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-    nino: ""
+    username: "junaidp@gmail.com",
+    password: "Password1@",
+    nino: "HG838408B"
   });
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,6 +119,7 @@ export default function AccessDetailPage() {
       // Store the access token
       setHmrcToken(response);
       if (typeof window !== 'undefined') {
+       // alert('setting:'+ response)
         sessionStorage.setItem('hmrcToken', response);
       }
       
