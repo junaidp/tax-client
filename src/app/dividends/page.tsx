@@ -214,7 +214,7 @@ export default function DividendsPage() {
   };
 
   return (
-      <StepLayout title="Dividends" backHref="/obligations" next={null}>
+      <StepLayout title="Dividends" backHref="/bsas-adjust" next={null}>
         <form onSubmit={onSubmit} className="space-y-6">
           {/* Tax Year Input */}
           <div>
