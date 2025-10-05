@@ -5,6 +5,7 @@ import axios from "axios";
 import { useAppState } from "@/lib/state";
 import { useRouter } from "next/navigation";
 import { getOrGenerateAndPersistFraudHeaders } from "@/lib/fraudHeadersFrontend";
+import { ArrowPathIcon, ChevronDownIcon, ChevronUpIcon, InformationCircleIcon } from "@heroicons/react/24/outline"; // Added icons
 
 // ----------------- Self-Employment Field Definitions -----------------
 const SE_INCOME_FIELDS = ["turnover", "other"];
@@ -105,6 +106,19 @@ export default function BsasAdjustPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // NEW STATES FOR SUMMARIES
+  const [listSummariesExpanded, setListSummariesExpanded] = useState(false);
+  const [listSummariesLoading, setListSummariesLoading] = useState(false);
+  const [summariesData, setSummariesData] = useState<any>(null); // To hold the response from listAdjustableSummaries
+
+  const [triggerSummaryExpanded, setTriggerSummaryExpanded] = useState(false);
+  const [triggerSummaryLoading, setTriggerSummaryLoading] = useState(false);
+  const [triggerSummaryInputs, setTriggerSummaryInputs] = useState({
+    startDate: "",
+    endDate: "",
+    businessId: "" // Mandatory for POST call
+  });
+
   // Self-Employment Tab Selector (2023 vs 2024)
   const [seActiveTab, setSeActiveTab] = useState<"2023" | "2024">("2024");
 
@@ -176,6 +190,96 @@ export default function BsasAdjustPage() {
       );
     }
   }, [calculationId, nino, localTaxYear]);
+
+  // NEW: List Summaries API Handler (GET /api/external/listAdjustableSummaries)
+  const handleListSummaries = async () => {
+    if (listSummariesExpanded && summariesData) {
+      setListSummariesExpanded(false);
+      return;
+    }
+    setListSummariesExpanded(true);
+    if (summariesData) return; // Already fetched and just expanded/collapsed
+
+    setListSummariesLoading(true);
+    setError(null);
+
+    try {
+      const token = hmrcToken || (typeof window !== "undefined" ? sessionStorage.getItem("hmrcToken") : "") || "";
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL;
+      if (!baseUrl) throw new Error("Backend base URL is not configured");
+
+      const headers = getOrGenerateAndPersistFraudHeaders();
+      const response = await axios.get(`${baseUrl}/api/external/listAdjustableSummaries`, {
+        params: {
+          nino: nino,
+          token: token,
+          taxYear: localTaxYear, // Use the taxYear from the main panel
+        },
+        headers,
+      });
+
+      setSummariesData(response.data);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || e?.message || "Failed to list summaries");
+      setListSummariesExpanded(false);
+    } finally {
+      setListSummariesLoading(false);
+    }
+  };
+
+  // NEW: Trigger Summary API Handler (POST /api/external/triggerAdjustableSummary)
+  const handleTriggerSummary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTriggerSummaryLoading(true);
+    setError(null);
+
+    if (!triggerSummaryInputs.startDate || !triggerSummaryInputs.endDate || !triggerSummaryInputs.businessId) {
+      setError("Accounting Period Start/End Date and Business ID are required to trigger a summary.");
+      setTriggerSummaryLoading(false);
+      return;
+    }
+
+    try {
+      const token = hmrcToken || (typeof window !== "undefined" ? sessionStorage.getItem("hmrcToken") : "") || "";
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL;
+      if (!baseUrl) throw new Error("Backend base URL is not configured");
+
+      const requestBody = {
+        accountingPeriod: {
+          startDate: triggerSummaryInputs.startDate,
+          endDate: triggerSummaryInputs.endDate,
+        },
+        // The typeOfBusiness is derived from the currently active adjustment tab/type
+        typeOfBusiness: submissionType.replace('Employment', '-employment').replace('Property', '-property'),
+        businessId: triggerSummaryInputs.businessId,
+      };
+
+      const headers = getOrGenerateAndPersistFraudHeaders();
+
+      await axios.post(
+          `${baseUrl}/api/external/triggerAdjustableSummary`,
+          requestBody,
+          {
+            params: {
+              nino: nino,
+              token: token,
+            },
+            headers: {
+              ...headers,
+              'Content-Type': 'application/json',
+            },
+          }
+      );
+
+      alert("Successfully triggered summary calculation.");
+      setTriggerSummaryExpanded(false); // Collapse on success
+    } catch (e: any) {
+      setError(e?.response?.data?.message || e?.message || "Failed to trigger summary");
+    } finally {
+      setTriggerSummaryLoading(false);
+    }
+  };
+
 
   // Helper function to clean sections (remove empty values)
   const cleanSection = (section: Record<string, string>) => {
@@ -593,27 +697,190 @@ export default function BsasAdjustPage() {
       </>
   );
 
+  // Render the summary data in a nicely formatted collapsible section
+  const renderSummariesData = () => {
+    if (listSummariesLoading) {
+      return (
+          <div className="flex flex-col items-center justify-center py-6">
+            <ArrowPathIcon className="animate-spin h-8 w-8 text-purple-600 mb-3" />
+            <p className="text-gray-600">Fetching adjustable summaries...</p>
+          </div>
+      );
+    }
+    if (!summariesData || summariesData.businessSources?.length === 0) {
+      return (
+          <p className="text-sm text-gray-600">No adjustable summaries found for Tax Year {localTaxYear}.</p>
+      );
+    }
+
+    return (
+        <div className="space-y-4">
+          {summariesData.businessSources.map((source: any, sourceIndex: number) => (
+              <div key={sourceIndex} className="p-4 bg-white rounded-lg border border-purple-100 shadow-inner">
+                <p className="text-sm font-semibold text-gray-900">Business: {source.typeOfBusiness} ({source.businessId})</p>
+                <p className="text-xs text-gray-600 mb-2">Accounting Period: {source.accountingPeriod.startDate} to {source.accountingPeriod.endDate}</p>
+                <h6 className="text-sm font-medium mt-2 mb-1">Summaries:</h6>
+                <div className="space-y-1">
+                  {source.summaries.map((summary: any, summaryIndex: number) => (
+                      <div key={summaryIndex} className={`p-3 rounded-md text-xs ${summary.summaryStatus === 'valid' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                        <p>Calculation ID: <span className="font-mono text-gray-700">{summary.calculationId}</span></p>
+                        <p>Status: <span className="font-semibold">{summary.summaryStatus.toUpperCase()}</span></p>
+                        <p>Requested: {new Date(summary.requestedDateTime).toLocaleString()}</p>
+                        {summary.adjustedSummary && (
+                            <p className="text-red-600">Adjusted: Yes (on {new Date(summary.adjustedDateTime).toLocaleString()})</p>
+                        )}
+                      </div>
+                  ))}
+                </div>
+              </div>
+          ))}
+        </div>
+    );
+  };
+
+
   return (
       <StepLayout title="Step 24: BSAS Adjustments" backHref="/bsas-trigger" next={null}>
         <form onSubmit={onSubmit} className="space-y-6 max-w-4xl mx-auto">
-          {/* Tax Year Input */}
+          {/* Tax Year Input and new Summary Actions */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <p className="font-semibold mb-3 text-lg">Tax Year</p>
-            <div className="max-w-xs">
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="taxYearInput">
-                Tax Year (e.g., 2024-25)
-              </label>
-              <input
-                  id="taxYearInput"
-                  type="text"
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g. 2024-25"
-                  value={localTaxYear}
-                  onChange={(e) => setLocalTaxYear(e.target.value.trim())}
-                  required
-              />
+            <div className="flex items-end justify-between gap-4">
+              <div className="max-w-xs flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="taxYearInput">
+                  Tax Year (e.g., 2024-25)
+                </label>
+                <input
+                    id="taxYearInput"
+                    type="text"
+                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g. 2024-25"
+                    value={localTaxYear}
+                    onChange={(e) => setLocalTaxYear(e.target.value.trim())}
+                    required
+                />
+              </div>
+
+              {/* Action Buttons (List Summaries & Trigger Summary) */}
+              <div className="flex gap-3">
+                <button
+                    type="button"
+                    onClick={handleListSummaries}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+                >
+                  <InformationCircleIcon className="h-5 w-5 mr-2" />
+                  List Summaries
+                  {listSummariesExpanded ? <ChevronUpIcon className="h-4 w-4 ml-1" /> : <ChevronDownIcon className="h-4 w-4 ml-1" />}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setTriggerSummaryExpanded(prev => !prev)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
+                >
+                  <ArrowPathIcon className="h-5 w-5 mr-2" />
+                  Trigger Summary
+                  {triggerSummaryExpanded ? <ChevronUpIcon className="h-4 w-4 ml-1" /> : <ChevronDownIcon className="h-4 w-4 ml-1" />}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* NEW: Collapsible List Summaries Section */}
+          {listSummariesExpanded && (
+              <div className="mt-2 border border-purple-200 rounded-lg bg-gradient-to-br from-purple-50 to-indigo-50 overflow-hidden shadow-sm">
+                <div className="p-6">
+                  <h6 className="text-base font-semibold text-gray-900 mb-4 flex items-center">
+                    <InformationCircleIcon className="h-5 w-5 mr-2 text-purple-600" />
+                    List Adjustable Summaries
+                  </h6>
+                  {renderSummariesData()}
+                </div>
+              </div>
+          )}
+
+          {/* NEW: Collapsible Trigger Summary Section */}
+          {triggerSummaryExpanded && (
+              <div className="mt-2 border border-orange-200 rounded-lg bg-gradient-to-br from-orange-50 to-yellow-50 overflow-hidden shadow-sm">
+                <div className="p-6">
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border-2 border-orange-200 p-6">
+                    <h6 className="text-base font-semibold text-gray-900 mb-4 flex items-center">
+                      <ArrowPathIcon className="h-5 w-5 mr-2 text-orange-600" />
+                      Trigger Adjustable Summary
+                    </h6>
+
+                    <form onSubmit={handleTriggerSummary} className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Target Business Type: <span className="font-semibold text-orange-700">{submissionType.replace('Employment', ' Employment').replace('Property', ' Property')}</span>
+                      </p>
+
+                      {/* Business ID Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="businessIdInput">
+                          Business ID (e.g., XAIS12345678910)
+                        </label>
+                        <input
+                            id="businessIdInput"
+                            type="text"
+                            value={triggerSummaryInputs.businessId}
+                            onChange={(e) => setTriggerSummaryInputs(prev => ({ ...prev, businessId: e.target.value.trim() }))}
+                            placeholder="Enter Business ID"
+                            className="block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                            required
+                        />
+                      </div>
+
+                      {/* Start Date Input (YYYY-MM-DD format) */}
+                      <div>
+                        <label htmlFor="summaryStartDate" className="block text-sm font-medium text-gray-700 mb-2">
+                          Accounting Period Start Date (YYYY-MM-DD)
+                        </label>
+                        <input
+                            id="summaryStartDate"
+                            type="date"
+                            value={triggerSummaryInputs.startDate}
+                            onChange={(e) => setTriggerSummaryInputs(prev => ({ ...prev, startDate: e.target.value }))}
+                            className="block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                            required
+                        />
+                      </div>
+
+                      {/* End Date Input (YYYY-MM-DD format) */}
+                      <div>
+                        <label htmlFor="summaryEndDate" className="block text-sm font-medium text-gray-700 mb-2">
+                          Accounting Period End Date (YYYY-MM-DD)
+                        </label>
+                        <input
+                            id="summaryEndDate"
+                            type="date"
+                            value={triggerSummaryInputs.endDate}
+                            onChange={(e) => setTriggerSummaryInputs(prev => ({ ...prev, endDate: e.target.value }))}
+                            className="block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                            required
+                        />
+                      </div>
+
+                      <div className="mt-6 flex justify-end">
+                        <button
+                            type="submit"
+                            disabled={triggerSummaryLoading}
+                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50"
+                        >
+                          {triggerSummaryLoading ? (
+                              <>
+                                <ArrowPathIcon className="animate-spin h-5 w-5 mr-3" />
+                                Triggering...
+                              </>
+                          ) : (
+                              "Trigger Summary Calculation"
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+          )}
+
 
           {/* Tabs */}
           <div className="flex gap-2 mb-6">
