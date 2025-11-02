@@ -10,10 +10,20 @@ export type Handler = (
 
 export function withFraudHeaders(handler: Handler) {
     return async (req: NextApiRequest, res: NextApiResponse) => {
-        const fraudHeaders = buildFraudHeaders(req);
+        const fraudHeadersRaw = buildFraudHeaders(req);
+
+        // Convert any string[] → comma-separated string
+        const fraudHeaders: Record<string, string> = Object.fromEntries(
+            Object.entries(fraudHeadersRaw).map(([key, value]) => [
+                key,
+                Array.isArray(value) ? value.join(",") : value,
+            ])
+        );
+
         return handler(req, res, fraudHeaders);
     };
 }
+
 
 // Helper for calling HMRC with fraud headers
 export async function hmrcGet(

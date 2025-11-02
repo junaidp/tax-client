@@ -18,6 +18,7 @@ export default function FinalDeclarationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Decide available calculation types based on tax year
   useEffect(() => {
@@ -66,13 +67,28 @@ export default function FinalDeclarationPage() {
           title="Step 43: Final Declaration"
           backHref="/calculation"
           next={
-            <button
-                className="btn-primary"
-                onClick={submit}
-                disabled={!nino || !localTaxYear || !calculationId || loading}
-            >
-              {loading ? "Submitting..." : "Submit"}
-            </button>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-md">
+                <p className="mb-2">I confirm that the information I have provided is complete and correct to the best of my knowledge.</p>
+                <p className="mb-4">I understand that giving false information may result in prosecution.</p>
+                <label className="flex items-start space-x-2">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={isConfirmed}
+                    onChange={(e) => setIsConfirmed(e.target.checked)}
+                  />
+                  <span>I confirm I have read and agree to this declaration.</span>
+                </label>
+              </div>
+              <button
+                  className="btn-primary w-full"
+                  onClick={submit}
+                  disabled={!nino || !localTaxYear || !calculationId || loading || !isConfirmed}
+              >
+                {loading ? "Submitting..." : "Submit"}
+              </button>
+            </div>
           }
       >
         <div className="space-y-4 max-w-xl">

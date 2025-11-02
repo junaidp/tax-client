@@ -26,10 +26,8 @@ const DEVICE_ID_KEY = "gov-client-device-id";
 function getOrCreateDeviceId(): string {
     if (typeof window === "undefined") return "";
     try {
-        let id: string | null = localStorage.getItem(DEVICE_ID_KEY);
+        let id = localStorage.getItem(DEVICE_ID_KEY) ?? "";
         if (!id) {
-            // prefer crypto.randomUUID if available
-            // fallback to timestamp + random string
             id =
                 typeof (crypto as any)?.randomUUID === "function"
                     ? (crypto as any).randomUUID()
@@ -37,6 +35,8 @@ function getOrCreateDeviceId(): string {
             localStorage.setItem(DEVICE_ID_KEY, id);
         }
         return id;
+
+
     } catch (err) {
         // In very locked-down browsers localStorage may throw — fallback
         return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;

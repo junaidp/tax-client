@@ -356,7 +356,7 @@ export default function BusinessDetails() {
               Your Business Details
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Loading your business records...
+
             </p>
           </div>
 

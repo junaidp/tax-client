@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from 'next/font/google';
 import { StateProvider } from "@/lib/state";
+import { ModalProvider } from "@/context/ModalContext";
 import Link from "next/link";
 
 const inter = Inter({ subsets: ['latin'] });
@@ -16,7 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
         <StateProvider>
-          <div className="min-h-screen flex flex-col">
+          <ModalProvider>
+            <div className="min-h-screen flex flex-col">
             {/* Navigation */}
             <nav className="bg-white shadow-sm">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,9 +96,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <p className="mt-8 text-center text-base text-gray-400">
                   &copy; {new Date().getFullYear()} TaxFiler Pro. All rights reserved.
                 </p>
+                <p className="mt-8 text-center text-base text-gray-400"> Our software implements HMRC Fraud Prevention Headers (Gov-Client headers) in all MTD ITSA API calls.
+                </p>
               </div>
             </footer>
-          </div>
+            </div>
+          </ModalProvider>
         </StateProvider>
       </body>
     </html>

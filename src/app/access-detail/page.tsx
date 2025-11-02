@@ -308,3 +308,4 @@ export default function AccessDetailPage() {
     </div>
   );
 };
+export const dynamic = "force-dynamic";

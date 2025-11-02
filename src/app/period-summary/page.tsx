@@ -5,6 +5,7 @@ import { StepLayout } from "@/components/StepLayout";
 import { useAppState } from "@/lib/state";
 import { useRouter } from "next/navigation";
 import { getOrGenerateAndPersistFraudHeaders } from "@/lib/fraudHeadersFrontend";
+import { useModal } from "@/context/ModalContext";
 
 interface PeriodDates {
     periodStartDate?: string;
@@ -65,6 +66,7 @@ type SummaryType = "selfEmployment" | "ukProperty" | "foreignProperty";
 export default function PeriodSummaryPage() {
     const { nino, businessId, hmrcToken } = useAppState();
     const router = useRouter();
+    const { showModal } = useModal();
     const [summaryType, setSummaryType] = useState<SummaryType>("selfEmployment");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -277,13 +279,26 @@ export default function PeriodSummaryPage() {
             if (!baseUrl) throw new Error("Backend base URL is not configured");
             const headers = getOrGenerateAndPersistFraudHeaders();
 
+            let wasSuccessful = false;
+
             if (summaryType === "selfEmployment") {
                 const cleanedData = cleanSubmissionData(formData);
-                await axios.put(
+                const response = await axios.put(
                     `${baseUrl}/api/external/createAmendSelfEmploymentPeriodSummary?${params.toString()}&taxYear=${encodeURIComponent(taxYear)}`,
                     cleanedData,
-                    { headers }
+                    {
+                        headers,
+                        validateStatus: () => true,
+                    }
                 );
+                if (response.status >= 200 && response.status < 300) {
+                    wasSuccessful = true;
+                } else {
+                    const errorMessage = response.data?.data?.message || response.statusText || "Failed to submit period summary";
+                    showModal(errorMessage);
+                    setError(errorMessage);
+                    return;
+                }
             } else if (summaryType === "ukProperty") {
                 // Build HMRC-compliant UK property body
                 const body: any = {
@@ -312,11 +327,22 @@ export default function PeriodSummaryPage() {
                     },
                 };
                 const cleaned = cleanSubmissionData(body);
-                await axios.put(
+                const response = await axios.put(
                     `${baseUrl}/api/external/createAndAmendUKPropertyPeriod?${params.toString()}&taxYear=${encodeURIComponent(taxYear)}`,
                     cleaned,
-                    { headers }
+                    {
+                        headers,
+                        validateStatus: () => true,
+                    }
                 );
+                if (response.status >= 200 && response.status < 300) {
+                    wasSuccessful = true;
+                } else {
+                    const errorMessage = response.data?.data?.message || response.statusText || "Failed to submit UK property period";
+                    showModal(errorMessage);
+                    setError(errorMessage);
+                    return;
+                }
             } else {
                 // foreignProperty
                 const fpBodyArray = foreignProperties.map((fp) => ({
@@ -349,16 +375,31 @@ export default function PeriodSummaryPage() {
                 };
 
                 const cleaned = cleanSubmissionData(body);
-                await axios.put(
+                const response = await axios.put(
                     `${baseUrl}/api/external/createAndAmendForeignPropertyPeriod?${params.toString()}&taxYear=${encodeURIComponent(taxYear)}`,
                     cleaned,
-                    { headers }
+                    {
+                        headers,
+                        validateStatus: () => true,
+                    }
                 );
+                if (response.status >= 200 && response.status < 300) {
+                    wasSuccessful = true;
+                } else {
+                    const errorMessage = response.data?.data?.message || response.statusText || "Failed to submit foreign property period";
+                    showModal(errorMessage);
+                    setError(errorMessage);
+                    return;
+                }
             }
 
-            router.push("/annual-submission");
+            if (wasSuccessful) {
+                router.push("/annual-submission");
+            }
         } catch (e: any) {
-            setError(e?.response?.data?.message || e?.message || "Failed to submit period summary");
+            const fallbackMessage = e?.response.data?.data?.message || e?.message || "Failed to submit period summary";
+            showModal(fallbackMessage);
+            setError(fallbackMessage);
         } finally {
             setLoading(false);
         }

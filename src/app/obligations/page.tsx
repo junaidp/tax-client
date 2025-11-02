@@ -4,7 +4,7 @@ import { StepLayout } from "@/components/StepLayout";
 import axios from "axios";
 import { useAppState } from "@/lib/state";
 import { useRouter } from "next/navigation";
-import {getOrGenerateAndPersistFraudHeaders} from "@/lib/fraudHeadersFrontend";
+import { getOrGenerateAndPersistFraudHeaders } from "@/lib/fraudHeadersFrontend";
 
 interface Obligation {
     periodStartDate?: string;
@@ -41,6 +41,7 @@ export default function ObligationsPage() {
     const [finalError, setFinalError] = useState<string | null>(null);
     const router = useRouter();
 
+    // Fetch standard obligations
     useEffect(() => {
         const fetchObligations = async () => {
             setError(null);
@@ -54,10 +55,9 @@ export default function ObligationsPage() {
                     "";
                 const params = new URLSearchParams({ nino: nino || "", token });
                 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL;
-                if (!baseUrl) {
-                    throw new Error("Backend base URL is not configured");
-                }
+                if (!baseUrl) throw new Error("Backend base URL is not configured");
                 const headers = getOrGenerateAndPersistFraudHeaders();
+
                 const res = await axios.get<ApiResponse>(
                     `${baseUrl}/api/external/getObligationDetail?${params.toString()}`,
                     { headers }
@@ -84,6 +84,7 @@ export default function ObligationsPage() {
         if (nino) fetchObligations();
     }, [nino, hmrcToken]);
 
+    // Fetch final obligations
     useEffect(() => {
         const fetchFinalObligations = async () => {
             setFinalError(null);
@@ -97,10 +98,9 @@ export default function ObligationsPage() {
                     "";
                 const params = new URLSearchParams({ nino: nino || "", token });
                 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL;
-                if (!baseUrl) {
-                    throw new Error("Backend base URL is not configured");
-                }
+                if (!baseUrl) throw new Error("Backend base URL is not configured");
                 const headers = getOrGenerateAndPersistFraudHeaders();
+
                 const res = await axios.get<FinalObligationResponse>(
                     `${baseUrl}/api/external/getFinalObligationDetail?${params.toString()}`,
                     { headers }
@@ -197,7 +197,8 @@ export default function ObligationsPage() {
                                                     <label className="flex items-center gap-3">
                                                         <input
                                                             type="radio"
-                                                            name="obligation"
+                                                            name="obligation" // shared across both sections
+                                                            checked={selected === o}
                                                             onChange={() => setSelected(o)}
                                                         />
                                                         <div>
@@ -227,7 +228,9 @@ export default function ObligationsPage() {
 
             {/* Final Obligations Section */}
             <div className="mt-8 pt-6 border-t-2 border-gray-300">
-                <h2 className="font-bold text-xl mb-4 text-gray-800">Final Declaration Obligations</h2>
+                <h2 className="font-bold text-xl mb-4 text-gray-800">
+                    Final Declaration Obligations
+                </h2>
 
                 {finalLoading && <p className="text-gray-600">Loading final obligations...</p>}
                 {finalError && <p className="error">{finalError}</p>}
@@ -247,14 +250,22 @@ export default function ObligationsPage() {
                                             : "bg-blue-50 border-blue-300"
                                     }`}
                                 >
-                                    <div className="flex items-start gap-3">
+                                    <label className="flex items-center gap-3">
+                                        <input
+                                            type="radio"
+                                            name="obligation" // same group → only one selection overall
+                                            checked={selected === o}
+                                            onChange={() => setSelected(o)}
+                                        />
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                    o.status === "open"
-                                                        ? "bg-yellow-100 text-yellow-800"
-                                                        : "bg-blue-100 text-blue-800"
-                                                }`}>
+                                                <span
+                                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                        o.status === "open"
+                                                            ? "bg-yellow-100 text-yellow-800"
+                                                            : "bg-blue-100 text-blue-800"
+                                                    }`}
+                                                >
                                                     {o.status?.toUpperCase()}
                                                 </span>
                                             </div>
@@ -270,7 +281,7 @@ export default function ObligationsPage() {
                                                 </p>
                                             )}
                                         </div>
-                                    </div>
+                                    </label>
                                 </li>
                             ))}
                         </ul>
@@ -278,7 +289,9 @@ export default function ObligationsPage() {
                 )}
 
                 {!finalLoading && finalObligations.length === 0 && (
-                    <p className="text-gray-500 text-sm">No final declaration obligations found.</p>
+                    <p className="text-gray-500 text-sm">
+                        No final declaration obligations found.
+                    </p>
                 )}
             </div>
         </StepLayout>
