@@ -52,7 +52,9 @@ export default function FinalCalcTriggerPage() {
       sessionStorage.setItem("taxYear", localTaxYear);
       router.push("/calculation");
     } catch (e: any) {
-      setError(e?.message || "Failed to trigger final calculation");
+      const responseData = e?.response?.data;
+      const serverMessage = responseData?.data?.message || responseData?.message;
+      setError(serverMessage || e?.message || "Failed to trigger final calculation");
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ export default function FinalCalcTriggerPage() {
               ))}
             </div>
             {!calculationType && (
-                <p className="text-sm text-gray-500 mt-1">Select per HMRC documentation.</p>
+                <p className="text-sm text-gray-500 mt-1"></p>
             )}
           </div>
 

@@ -6,6 +6,40 @@ function buildUrl(path: string) {
   return `${BASE_URL}${path}`;
 }
 
+function extractErrorMessage(data: any): string | undefined {
+  if (!data) return undefined;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (typeof data === "object") {
+    if (data.message && typeof data.message === "string") {
+      return data.message;
+    }
+    if (data.error && typeof data.error === "string") {
+      return data.error;
+    }
+    if (Array.isArray(data.errors)) {
+      const combined = data.errors
+          .map((err: any) => err?.message)
+          .filter((msg: any): msg is string => Boolean(msg))
+          .join("; ");
+      if (combined) {
+        return combined;
+      }
+    }
+    if (data.data) {
+      const nested = extractErrorMessage(data.data);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 async function request(path: string, options: RequestInit & { auth?: boolean, headers?: HeadersInit } = {}) {
   const url = buildUrl(path);
   const headers = new Headers(options.headers || {});
@@ -51,8 +85,8 @@ async function request(path: string, options: RequestInit & { auth?: boolean, he
   const data = isJson ? await res.json().catch(() => ({})) : await res.text();
 
   if (!res.ok) {
-    const message = (isJson && (data?.message || data?.error)) || res.statusText;
-    throw new Error(message || `Request failed: ${res.status}`);
+    const message = isJson ? extractErrorMessage(data) : undefined;
+    throw new Error(message || res.statusText || `Request failed: ${res.status}`);
   }
 
   return data;

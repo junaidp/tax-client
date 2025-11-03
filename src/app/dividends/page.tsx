@@ -42,7 +42,7 @@ interface FormData {
 export default function DividendsPage() {
   const { nino, hmrcToken } = useAppState();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string[] | null>(null);
   const router = useRouter();
 
   const [expandedPanels, setExpandedPanels] = useState<Record<string, boolean>>({
@@ -156,11 +156,38 @@ export default function DividendsPage() {
 
       router.push("/final-calc-trigger");
     } catch (e: any) {
-      setError(
-          e?.response?.data?.message ||
-          e?.message ||
-          "Failed to submit dividend data"
-      );
+      const responseData = e?.response?.data;
+      const nestedData = responseData?.data;
+
+      const messages: string[] = [];
+
+      const topLevelMessage = nestedData?.message || responseData?.message;
+      if (topLevelMessage) {
+        messages.push(topLevelMessage);
+      }
+
+      const errorEntries = [nestedData?.errors, responseData?.errors]
+          .filter(Array.isArray)
+          .flat() as { code?: string; message?: string; paths?: string[] }[];
+
+      errorEntries.forEach((err) => {
+        if (!err?.message) return;
+        const code = err.code ? `${err.code}: ` : "";
+        const paths = Array.isArray(err.paths) && err.paths.length
+            ? ` (paths: ${err.paths.join(", ")})`
+            : "";
+        messages.push(`${code}${err.message}${paths}`);
+      });
+
+      if (messages.length === 0 && e?.message) {
+        messages.push(e.message);
+      }
+
+      if (messages.length === 0) {
+        messages.push("Failed to submit dividend data");
+      }
+
+      setError(messages);
     } finally {
       setLoading(false);
     }
@@ -303,7 +330,13 @@ export default function DividendsPage() {
               </div>
           ))}
 
-          {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
+          {error && (
+              <div className="text-red-500 text-sm mt-2 space-y-1">
+                {error.map((line, idx) => (
+                    <div key={idx}>{line}</div>
+                ))}
+              </div>
+          )}
 
           <div className="flex justify-end mt-6">
             <button

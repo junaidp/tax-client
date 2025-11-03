@@ -449,9 +449,9 @@ export default function BsasAdjustPage() {
         };
       }
 
-      if (Object.keys(requestBody).length === 0) {
-        throw new Error("No data entered for submission.");
-      }
+     // if (Object.keys(requestBody).length === 0) {
+      //  throw new Error("No data entered for submission.");
+      //}
 
       const params = new URLSearchParams({
         nino: nino || "",
@@ -468,7 +468,8 @@ export default function BsasAdjustPage() {
 
       router.push("/dividends");
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Failed to submit BSAS adjustments");
+      const serverMessage = e?.response?.data?.data?.message || e?.response?.data?.message;
+      setError(serverMessage || e?.message || "Failed to submit BSAS adjustments");
     } finally {
       setLoading(false);
     }

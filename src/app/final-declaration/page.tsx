@@ -56,7 +56,7 @@ export default function FinalDeclarationPage() {
       );
       setReceipt(res);
     } catch (e: any) {
-      setError(e?.message || "Failed to submit final declaration");
+      setError(e?.response?.data?.message || e?.message || "Failed to submit final Declaration");
     } finally {
       setLoading(false);
     }
