@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAppState } from "@/lib/state";
 import axios from "axios";
 import { withFraudHeaders, hmrcGet } from "@/lib/withFraudHeaders";
@@ -34,7 +34,6 @@ interface Business {
 
 export default function BusinessDetails() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { setBusinessId } = useAppState();
   const [nino, setNino] = useState("");
   const [businesses, setBusinesses] = useState<Business[]>([]);
