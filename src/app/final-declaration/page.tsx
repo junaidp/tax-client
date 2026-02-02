@@ -70,7 +70,7 @@ export default function FinalDeclarationPage() {
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-md">
                 <p className="mb-2">I confirm that the information I have provided is complete and correct to the best of my knowledge.</p>
-                <p className="mb-4">I understand that giving false information may result in prosecution.</p>
+                <p className="mb-4">I understand that it is a serious offence to make a false declaration and that penalties may be imposed for false or incorrect information.</p>
                 <label className="flex items-start space-x-2">
                   <input
                     type="checkbox"
@@ -78,7 +78,7 @@ export default function FinalDeclarationPage() {
                     checked={isConfirmed}
                     onChange={(e) => setIsConfirmed(e.target.checked)}
                   />
-                  <span>I confirm I have read and agree to this declaration.</span>
+                  <span>I confirm the above is true and I agree to submit this declaration.</span>
                 </label>
               </div>
               <button

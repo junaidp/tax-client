@@ -10,12 +10,12 @@ export default function AccessDetailPage() {
   const params = useSearchParams();
   const code = params.get("code");
   const urlHmrcToken = params.get("token") || params.get("access_token");
-  const { setToken, setHmrcToken, setNino } = useAppState();
+  const { setToken, setHmrcToken, setNino, setDigitalRecord } = useAppState();
 
   const [formData, setFormData] = useState({
     username: "junaidp@gmail.com",
     password: "Password1@",
-    nino: "HG838408B"
+    nino: "BL842457C"
   });
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,24 +63,29 @@ export default function AccessDetailPage() {
         );
         
         console.log('Authentication response:', res);
-
         const token = (res.token || res.access_token || res.jwt || res.id_token) as string | undefined;
         if (!token) {
           console.error('No token found in response:', res);
           throw new Error("Authentication failed: No token received in response");
         }
-        
+
         console.log('Authentication successful, token received');
-        
+
         setToken(token);
         setNino(formData.nino);
         sessionStorage.setItem("authToken", token);
         sessionStorage.setItem("userNino", formData.nino);
+
+        const digitalRecord = (res.digitalRecord ?? res.user?.digitalRecord ?? null) as any;
+        if (digitalRecord) {
+          setDigitalRecord(digitalRecord);
+        }
         
         // If we have HMRC code, proceed to exchange token and then business details
         if (code) {
           console.log('Redirecting to business details with code:', code);
           try {
+
             await exchangeCodeForToken(code);
             router.push('/business-details');
           } catch (error) {
