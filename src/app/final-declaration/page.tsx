@@ -19,6 +19,9 @@ export default function FinalDeclarationPage() {
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupContent, setPopupContent] = useState<string>("");
+  const [popupSuccess, setPopupSuccess] = useState(false);
 
   // Decide available calculation types based on tax year
   useEffect(() => {
@@ -55,8 +58,14 @@ export default function FinalDeclarationPage() {
         { headers }
       );
       setReceipt(res);
+      setPopupContent(JSON.stringify(res, null, 2));
+      setPopupSuccess(true);
+      setShowPopup(true);
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || "Failed to submit final Declaration");
+      setPopupContent("");
+      setPopupSuccess(false);
+      setShowPopup(false);
     } finally {
       setLoading(false);
     }
@@ -136,6 +145,27 @@ export default function FinalDeclarationPage() {
               </div>
           )}
         </div>
+        {showPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full relative flex flex-col items-center">
+              <button
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                onClick={() => setShowPopup(false)}
+                aria-label="Close"
+                style={{ background: 'none', border: 'none', padding: 0 }}
+              >
+                &times;
+              </button>
+              <h2 className="text-lg font-semibold mb-4"></h2>
+              {popupSuccess && (
+                <div className="mb-4 text-green-700 font-semibold text-base text-center">Final Declaration successfully submitted</div>
+              )}
+              {popupContent && popupContent !== '""' && (
+                <pre className="text-xs whitespace-pre-wrap break-all mb-4 text-center">{popupContent}</pre>
+              )}
+            </div>
+          </div>
+        )}
       </StepLayout>
   );
 }

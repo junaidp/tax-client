@@ -61,12 +61,14 @@ export default function DividendsPage() {
     }));
   };
 
-  const [taxYear, setTaxYear] = useState<string>(
-      (new Date().getFullYear() - 1).toString()
-  );
+  const [taxYear, setTaxYear] = useState<string>("2025-26");
   const [formData, setFormData] = useState<FormData>({
-    foreignDividend: [{ countryCode: "", taxableAmount: 0 }],
-    dividendIncomeReceivedWhilstAbroad: [{ countryCode: "", taxableAmount: 0 }],
+    foreignDividend: [{ countryCode: "GBR", taxableAmount: 100 }],
+    dividendIncomeReceivedWhilstAbroad: [{ countryCode: "GBR", taxableAmount: 100 }],
+    stockDividend: { grossAmount: 100 },
+    redeemableShares: { grossAmount: 100 },
+    bonusIssuesOfSecurities: { grossAmount: 100 },
+    closeCompanyLoansWrittenOff: { grossAmount: 100 },
   });
 
   const handleArrayChange = (

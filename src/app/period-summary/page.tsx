@@ -72,7 +72,7 @@ export default function PeriodSummaryPage() {
     const [error, setError] = useState<string | null>(null);
 
     // Common Tax Year state
-    const [taxYear, setTaxYear] = useState("");
+    const [taxYear, setTaxYear] = useState("2025-26");
 
     // Self-employment form state (exactly as before)
     const [expandedPanels, setExpandedPanels] = useState<Record<string, boolean>>({
@@ -90,7 +90,7 @@ export default function PeriodSummaryPage() {
             periodEndDate: "",
         },
         periodIncome: {
-            turnover: 0,
+            turnover: 100,
             other: 0,
             taxTakenOffTradingIncome: 0,
         },

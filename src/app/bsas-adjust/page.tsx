@@ -96,12 +96,12 @@ export default function BsasAdjustPage() {
   // Self-Employment States
   const [seData, setSeData] = useState({
     forTY2023_24AndBefore: {
-      income: Object.fromEntries(SE_INCOME_FIELDS.map(f => [f, ""])),
+      income: Object.fromEntries(SE_INCOME_FIELDS.map(f => [f, f === "turnover" ? "100" : ""])),
       expenses: Object.fromEntries(SE_EXPENSE_FIELDS.map(f => [f, ""])),
       additions: Object.fromEntries(SE_ADDITION_FIELDS.map(f => [f, ""])),
     },
     forTY2024_25AndAfter: {
-      income: Object.fromEntries(SE_INCOME_FIELDS.map(f => [f, ""])),
+      income: Object.fromEntries(SE_INCOME_FIELDS.map(f => [f, f === "turnover" ? "100" : ""])),
       expenses: Object.fromEntries(SE_EXPENSE_FIELDS.map(f => [f, ""])),
       additions: Object.fromEntries(SE_ADDITION_FIELDS.map(f => [f, ""])),
     },
@@ -451,7 +451,7 @@ export default function BsasAdjustPage() {
 
      // if (Object.keys(requestBody).length === 0) {
       //  throw new Error("No data entered for submission.");
-      //}
+     //}
 
       const params = new URLSearchParams({
         nino: nino || "",

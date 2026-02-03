@@ -10,7 +10,7 @@ import { getOrGenerateAndPersistFraudHeaders } from "@/lib/fraudHeadersFrontend"
 export default function FinalCalcTriggerPage() {
   const { nino, taxYear } = useAppState();
   const [localTaxYear, setLocalTaxYear] = useState(taxYear || "");
-  const [calculationType, setCalculationType] = useState<string>("");
+  const [calculationType, setCalculationType] = useState<string>("in-year");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
